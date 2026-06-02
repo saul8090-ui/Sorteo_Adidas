@@ -10,6 +10,7 @@
             --adidas-green: #0f5b33;
             --adidas-dark: #0a3a20;
             --adidas-gold: #f4d03f;
+            --adidas-red: #c8102e;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
@@ -28,7 +29,7 @@
 
         .logo-container {
             width: 250px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .logo-container img {
@@ -42,8 +43,17 @@
             font-weight: 900;
             letter-spacing: 5px;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             color: var(--adidas-gold);
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            color: #eee;
         }
 
         .ticket-display {
@@ -55,9 +65,22 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             margin-bottom: 50px;
-            min-width: 400px;
+            min-width: 450px;
             border: 8px solid var(--adidas-gold);
             transition: all 0.3s ease;
+        }
+
+        /* Estilo para resaltar cuando sale el 3er boleto */
+        .premiado-final {
+            animation: pulse-premiado 1s ease 3; /* Pulsa 3 veces y para */
+            background-color: var(--adidas-gold);
+            color: #000;
+            border-color: #fff;
+        }
+
+        @keyframes pulse-premiado {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .btn-sorteo {
@@ -71,7 +94,7 @@
             border-radius: 5px;
             cursor: pointer;
             box-shadow: 0 5px 15px rgba(244, 208, 63, 0.4);
-            transition: transform 0.2s;
+            transition: all 0.2s;
         }
 
         .btn-sorteo:hover {
@@ -83,19 +106,20 @@
             color: #888;
             cursor: not-allowed;
             box-shadow: none;
+            transform: none;
         }
-
-        /* Animación cuando hay un ganador */
-        .winner-anim {
-            animation: pulse-winner 1s ease infinite;
-            background-color: var(--adidas-gold);
-            color: #000;
-            border-color: #fff;
+        
+        .reset-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
         }
-
-        @keyframes pulse-winner {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        .reset-container:hover { opacity: 1; }
+        .btn-reset {
+            background: none; border: 1px solid #fff; color: #fff;
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
         }
     </style>
 </head>
@@ -105,21 +129,29 @@
         <img src="https://1000marcas.net/wp-content/uploads/2019/11/Logo-Adidas.png" alt="Adidas">
     </div>
 
-    <h1 class="title">Sorteo Especial</h1>
+    <h1 class="title">SORTEO ESPECIAL</h1>
+    <h2 class="subtitle">Gana el 3er boleto sorteado</h2>
     
     <div class="ticket-display" id="display">--</div>
 
-    <button class="btn-sorteo" id="btn-iniciar">Cargando participantes...</button>
+    <button class="btn-sorteo" id="btn-iniciar" disabled>Cargando participantes...</button>
+    
+    <div class="reset-container">
+        <button class="btn-reset" onclick="resetSorteo()">Reiniciar Cuenta</button>
+    </div>
 
     <script>
         // URL CORREGIDA: Ya incluye el ?action=sorteo al final
         const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwau3NU3HutYO5LjEfv4hqfz41DjZWo3LChZ-jaglgGNzWapF9tzYodF8JDMvssUJR9/exec?action=sorteo';
         
-        // (Opcional) Puedes agregar un audio de redoble de tambores y platillos aquí
-        // const audioRedoble = new Audio('LINK_AUDIO_REDOBLE.mp3');
-        // const audioGanador = new Audio('LINK_AUDIO_GANADOR.mp3');
+        // (Opcional) Links de audio sugeridos para uso libre
+        // const audioRedoble = new Audio('https://assets.mixkit.co/active_storage/sfx/1601/1601-preview.mp3'); // Redoble corto en loop
+        // audioRedoble.loop = true;
+        // const audioFinalCorte = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'); // Sonido de parada/golpe
+        // const audioFanfarria = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'); // Fanfarria ganador
 
         let participantes = [];
+        let boletosSorteados = 0; // Contador de boletos extraídos
         const display = document.getElementById('display');
         const btnIniciar = document.getElementById('btn-iniciar');
 
@@ -129,7 +161,7 @@
             .then(data => {
                 if (data.success && data.tickets.length > 0) {
                     participantes = data.tickets;
-                    btnIniciar.innerText = "¡SACAR GANADOR!";
+                    actualizarTextoBoton();
                     btnIniciar.disabled = false;
                 } else {
                     btnIniciar.innerText = "Nadie se ha registrado aún";
@@ -140,41 +172,92 @@
                 btnIniciar.innerText = "Error de conexión";
             });
 
-        // Lógica de la ruleta animada
+        // Función para actualizar el texto del botón según la ronda
+        function actualizarTextoBoton() {
+            if (boletosSorteados === 0) btnIniciar.innerText = "SORTEAR BOLETO 1";
+            else if (boletosSorteados === 1) btnIniciar.innerText = "SORTEAR BOLETO 2";
+            else if (boletosSorteados === 2) btnIniciar.innerText = "SORTEAR BOLETO 3 (GANADOR)";
+            else btnIniciar.innerText = "FIN DEL SORTEO";
+        }
+
+        // Lógica de la ruleta animada con FRENADO (Deceleración)
         btnIniciar.addEventListener('click', () => {
-            if (participantes.length === 0) return;
+            if (participantes.length === 0 || boletosSorteados >= 3) return;
 
             btnIniciar.disabled = true;
-            display.classList.remove('winner-anim');
+            display.classList.remove('premiado-final');
             
-            // audioRedoble.play(); // Descomenta si usas audio
+            // if(boletosSorteados === 2) { audioRedoble.play(); } // Solo redoble en el último
 
-            let counter = 0;
-            const maxTicks = 40; // Cuántas veces cambiará el número (duración del suspenso)
-            const speed = 50; // Velocidad de cambio en milisegundos
+            // --- CONFIGURACIÓN DE LA ANIMACIÓN ---
+            const duracionFaseRapida = 3000; // 3 segundos a máxima velocidad
+            const totalCambiosFrenado = 25;   // Cuántos números pasan mientras frena
+            const velocidadInicial = 40;     // Milisegundos entre cambios (muy rápido)
+            const factorFrenado = 1.15;       // Qué tanto más lento es cada cambio (1.15 = 15% más lento cada vez)
 
-            const ruleta = setInterval(() => {
+            let tiempoAcumulado = 0;
+            let cambiosFrenadoRealizados = 0;
+            let velocidadActual = velocidadInicial;
+
+            // Función interna recursiva para controlar el tiempo dinámicamente
+            function iterarRuleta() {
                 // Selecciona un ticket al azar para el efecto visual
                 const randomVisual = participantes[Math.floor(Math.random() * participantes.length)];
                 display.innerText = randomVisual;
-                counter++;
 
-                if (counter >= maxTicks) {
-                    clearInterval(ruleta);
-                    
-                    // Seleccionar ganador final real
-                    const ganadorFinal = participantes[Math.floor(Math.random() * participantes.length)];
-                    display.innerText = ganadorFinal;
-                    display.classList.add('winner-anim');
-                    
-                    // audioRedoble.pause();
-                    // audioGanador.play(); // Descomenta si usas audio
-                    
-                    btnIniciar.innerText = "SACAR OTRO GANADOR";
-                    btnIniciar.disabled = false;
+                if (tiempoAcumulado < duracionFaseRapida) {
+                    // FASE RÁPIDA: Velocidad constante
+                    tiempoAcumulado += velocidadActual;
+                    setTimeout(iterarRuleta, velocidadActual);
+                } else if (cambiosFrenadoRealizados < totalCambiosFrenado) {
+                    // FASE DE FRENADO: Desaceleración progresiva
+                    cambiosFrenadoRealizados++;
+                    velocidadActual *= factorFrenado; // Hacemos el siguiente intervalo más largo
+                    setTimeout(iterarRuleta, velocidadActual);
+                } else {
+                    // FASE FINAL: Detenerse y mostrar resultado
+                    finalizarRonda();
                 }
-            }, speed);
+            }
+
+            // Iniciar la animación
+            iterarRuleta();
         });
+
+        // Función que se ejecuta al detenerse la animación
+        function finalizarRonda() {
+            // Seleccionar ganador final real de esta ronda
+            const numeroFinal = participantes[Math.floor(Math.random() * participantes.length)];
+            display.innerText = numeroFinal;
+            
+            // audioRedoble.pause(); audioRedoble.currentTime = 0; // Parar redoble
+            
+            boletosSorteados++;
+            actualizarTextoBoton();
+
+            if (boletosSorteados === 3) {
+                // ¡Es el tercer boleto! Resaltar como ganador final
+                display.classList.add('premiado-final');
+                // audioFanfarria.play(); // Audio fanfarria
+                alert(`¡TENEMOS GANADOR!\nEl boleto premiado (el tercero) es: ${numeroFinal}`);
+                btnIniciar.disabled = true;
+                btnIniciar.innerText = "¡FELICIDADES!";
+            } else {
+                // audioFinalCorte.play(); // Sonido seco de parada
+                btnIniciar.disabled = false;
+                // Pequeño delay antes de permitir el siguiente clic para no "spoilear" rápido
+            }
+        }
+        
+        // Función auxiliar por si acaso
+        function resetSorteo() {
+            boletosSorteados = 0;
+            display.innerText = "--";
+            display.classList.remove('premiado-final');
+            actualizarTextoBoton();
+            btnIniciar.disabled = false;
+        }
     </script>
 </body>
+</html>
 </html>
